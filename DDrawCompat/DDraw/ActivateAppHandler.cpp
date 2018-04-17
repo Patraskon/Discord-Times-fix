@@ -28,6 +28,14 @@ namespace
 
 		switch (uMsg)
 		{
+		case WM_ACTIVATE:
+		{
+			if (wParam == WA_INACTIVE)
+			{
+				ShowWindow(hwnd, SW_MINIMIZE);
+			}
+			break;
+		}
 		case WM_ACTIVATEAPP:
 		{
 			isDisplayChangeNotificationEnabled = false;
