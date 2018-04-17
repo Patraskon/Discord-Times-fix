@@ -404,9 +404,6 @@
     <ClCompile Include="Common\Log.cpp">
       <Filter>Source Files\Common</Filter>
     </ClCompile>
-    <ClCompile Include="Win32\FontSmoothing.cpp">
-      <Filter>Source Files\Win32</Filter>
-    </ClCompile>
     <ClCompile Include="Win32\MsgHooks.cpp">
       <Filter>Source Files\Win32</Filter>
     </ClCompile>

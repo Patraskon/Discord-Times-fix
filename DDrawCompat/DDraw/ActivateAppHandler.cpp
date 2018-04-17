@@ -10,20 +10,16 @@
 
 namespace
 {
-	Win32::FontSmoothing::SystemSettings g_fontSmoothingSettings = {};
 	WNDPROC g_origDdWndProc = nullptr;
 
 	void activateApp()
 	{
 		Gdi::enableEmulation();
-		Win32::FontSmoothing::setSystemSettings(g_fontSmoothingSettings);
 	}
 
 	void deactivateApp()
 	{
 		Gdi::disableEmulation();
-		g_fontSmoothingSettings = Win32::FontSmoothing::getSystemSettings();
-		Win32::FontSmoothing::setSystemSettings(Win32::FontSmoothing::g_origSystemSettings);
 	}
 
 	LRESULT CALLBACK ddWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)

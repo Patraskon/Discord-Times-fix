@@ -125,7 +125,6 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID /*lpvReserved*/)
 			Compat::getProcAddress(hinstDLL, "DirectDrawCreate"));
 		Compat::redirectIatHooks("ddraw.dll", "DirectDrawCreateEx",
 			Compat::getProcAddress(hinstDLL, "DirectDrawCreateEx"));
-		Win32::FontSmoothing::g_origSystemSettings = Win32::FontSmoothing::getSystemSettings();
 		Win32::MsgHooks::installHooks();
 		Time::init();
 
@@ -143,7 +142,6 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID /*lpvReserved*/)
 		Compat::unhookAllFunctions();
 		FreeLibrary(g_origDInputModule);
 		FreeLibrary(g_origDDrawModule);
-		Win32::FontSmoothing::setSystemSettingsForced(Win32::FontSmoothing::g_origSystemSettings);
 		timeEndPeriod(1);
 		Compat::Log() << "DDrawCompat detached successfully";
 	}

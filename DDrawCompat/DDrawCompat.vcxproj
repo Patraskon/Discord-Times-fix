@@ -281,7 +281,6 @@
     <ClCompile Include="Gdi\TitleBar.cpp" />
     <ClCompile Include="Gdi\WinProc.cpp" />
     <ClCompile Include="Win32\DisplayMode.cpp" />
-    <ClCompile Include="Win32\FontSmoothing.cpp" />
     <ClCompile Include="Win32\MsgHooks.cpp" />
     <ClCompile Include="Win32\Registry.cpp" />
   </ItemGroup>
