@@ -8,14 +8,9 @@
 namespace
 {
 	DDSURFACEDESC2 g_primarySurfaceDesc = {};
-	CompatWeakPtr<IDirectDrawSurface7> g_primarySurface = nullptr;
-	HANDLE g_gdiResourceHandle = nullptr;
+	CompatWeakPtr<IDirectDrawSurface> g_gdiSurface = nullptr;
+	CompatWeakPtr<IDirectDrawSurface> g_primarySurface = nullptr;
 	DWORD g_origCaps = 0;
-
-	HANDLE getResourceHandle(IDirectDrawSurface7& surface)
-	{
-		return reinterpret_cast<HANDLE**>(&surface)[1][2];
-	}
 }
 
 namespace DDraw
@@ -29,7 +24,7 @@ namespace DDraw
 	{
 		Compat::LogEnter("PrimarySurface::~PrimarySurface");
 
-		g_gdiResourceHandle = nullptr;
+		g_gdiSurface = nullptr;
 		g_primarySurface = nullptr;
 		g_origCaps = 0;
 		s_palette = nullptr;
@@ -73,8 +68,9 @@ namespace DDraw
 		std::unique_ptr<Surface> privateData(new PrimarySurface(Surface::getSurface(*surface)));
 		attach(*surface7, privateData);
 
-		g_gdiResourceHandle = getResourceHandle(*surface7);
-		g_primarySurface = surface7;
+		CompatPtr<IDirectDrawSurface> surface1(Compat::queryInterface<IDirectDrawSurface>(surface));
+		g_gdiSurface = surface1;
+		g_primarySurface = surface1;
 		g_origCaps = origCaps;
 
 		ZeroMemory(&g_primarySurfaceDesc, sizeof(g_primarySurfaceDesc));
@@ -109,12 +105,11 @@ namespace DDraw
 
 	HRESULT PrimarySurface::flipToGdiSurface()
 	{
-		CompatPtr<IDirectDrawSurface7> gdiSurface;
-		if (!g_primarySurface || !(gdiSurface = getGdiSurface()))
+		if (!g_primarySurface)
 		{
 			return DDERR_NOTFOUND;
 		}
-		return g_primarySurface.get()->lpVtbl->Flip(g_primarySurface, gdiSurface, DDFLIP_WAIT);
+		return g_primarySurface.get()->lpVtbl->Flip(g_primarySurface, g_gdiSurface, DDFLIP_WAIT);
 	}
 
 	const DDSURFACEDESC2& PrimarySurface::getDesc()
@@ -124,35 +119,17 @@ namespace DDraw
 
 	CompatPtr<IDirectDrawSurface7> PrimarySurface::getGdiSurface()
 	{
+		return CompatPtr<IDirectDrawSurface7>::from(g_gdiSurface.get());
+	}
+
+	CompatPtr<IDirectDrawSurface7> PrimarySurface::getPrimary()
+	{
 		if (!g_primarySurface)
 		{
 			return nullptr;
 		}
-
-		DDSCAPS2 caps = {};
-		caps.dwCaps = DDSCAPS_FLIP;
-		CompatWeakPtr<IDirectDrawSurface7> surface(g_primarySurface);
-
-		do
-		{
-			if (getResourceHandle(*surface) == g_gdiResourceHandle)
-			{
-				return CompatPtr<IDirectDrawSurface7>::from(surface.get());
-			}
-			
-			if (FAILED(surface->GetAttachedSurface(surface, &caps, &surface.getRef())))
-			{
-				return nullptr;
-			}
-			surface->Release(surface);
-		} while (surface != g_primarySurface);
-
-		return nullptr;
-	}
-
-	CompatWeakPtr<IDirectDrawSurface7> PrimarySurface::getPrimary()
-	{
-		return g_primarySurface;
+		return CompatPtr<IDirectDrawSurface7>(
+			Compat::queryInterface<IDirectDrawSurface7>(g_primarySurface.get()));
 	}
 
 	DWORD PrimarySurface::getOrigCaps()
@@ -183,6 +160,37 @@ namespace DDraw
 			surfacePtr->GetAttachedSurface(surfacePtr, &flipCaps, &nextSurface.getRef());
 			surfacePtr.swap(nextSurface);
 		} while (surfacePtr && surfacePtr != &surface);
+	}
+
+	void PrimarySurface::updateGdiSurfacePtr(IDirectDrawSurface* flipTargetOverride)
+	{
+		auto primary(CompatPtr<IDirectDrawSurface>::from(m_surface->getDirectDrawSurface().get()));
+		if (flipTargetOverride)
+		{
+			if (g_gdiSurface.get() == flipTargetOverride)
+			{
+				g_gdiSurface = primary;
+			}
+			else if (g_gdiSurface.get() == primary)
+			{
+				g_gdiSurface = flipTargetOverride;
+			}
+			return;
+		}
+
+		DDSCAPS caps = {};
+		caps.dwCaps = DDSCAPS_FLIP;
+		CompatPtr<IDirectDrawSurface> current(primary);
+		CompatPtr<IDirectDrawSurface> next;
+		HRESULT result = current->GetAttachedSurface(current, &caps, &next.getRef());
+		while (SUCCEEDED(result) && next.get() != g_gdiSurface.get() && next.get() != primary)
+		{
+			current = next;
+			next.reset();
+			result = current->GetAttachedSurface(current, &caps, &next.getRef());
+		}
+
+		g_gdiSurface = current;
 	}
 
 	CompatWeakPtr<IDirectDrawPalette> PrimarySurface::s_palette;

@@ -8,6 +8,8 @@
 
 namespace DDraw
 {
+	CompatPtr<IDirectDraw7> getDirectDraw(CompatRef<IDirectDrawSurface7> surface);
+
 	template <typename TSurface>
 	class DirectDrawSurface : public CompatVtable<Vtable<TSurface>>
 	{

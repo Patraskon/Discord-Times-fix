@@ -19,7 +19,7 @@ namespace DDraw
 		static HRESULT flipToGdiSurface();
 		static const DDSURFACEDESC2& getDesc();
 		static CompatPtr<IDirectDrawSurface7> getGdiSurface();
-		static CompatWeakPtr<IDirectDrawSurface7> getPrimary();
+		static CompatPtr<IDirectDrawSurface7> getPrimary();
 		static DWORD getOrigCaps();
 
 		void updateGdiSurfacePtr(IDirectDrawSurface* flipTargetOverride);
