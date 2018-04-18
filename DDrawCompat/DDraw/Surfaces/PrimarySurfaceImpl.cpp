@@ -205,6 +205,17 @@ namespace DDraw
 	}
 
 	template <typename TSurface>
+	HRESULT PrimarySurfaceImpl<TSurface>::SetClipper(TSurface* This, LPDIRECTDRAWCLIPPER lpDDClipper)
+	{
+		HRESULT result = m_impl.SetClipper(This, lpDDClipper);
+		if (SUCCEEDED(result))
+		{
+			RealPrimarySurface::setClipper(lpDDClipper);
+		}
+		return result;
+	}
+
+	template <typename TSurface>
 	HRESULT PrimarySurfaceImpl<TSurface>::SetPalette(TSurface* This, LPDIRECTDRAWPALETTE lpDDPalette)
 	{
 		if (lpDDPalette)
