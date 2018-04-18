@@ -11,6 +11,7 @@
 namespace
 {
 	WNDPROC g_origDdWndProc = nullptr;
+	bool g_windowed = false;
 
 	void activateApp()
 	{
@@ -25,42 +26,93 @@ namespace
 	LRESULT CALLBACK ddWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
 		static bool isDisplayChangeNotificationEnabled = true;
+		static int redrawCount = 0;
 
 		switch (uMsg)
 		{
-		case WM_ACTIVATE:
-		{
-			if (wParam == WA_INACTIVE)
+			//Workaround for invisible menu on Load/Save/Delete in Tiberian Sun
+			case WM_PARENTNOTIFY:
 			{
-				ShowWindow(hwnd, SW_MINIMIZE);
-			}
-			break;
-		}
-		case WM_ACTIVATEAPP:
-		{
-			isDisplayChangeNotificationEnabled = false;
-			if (TRUE == wParam)
-			{
-				activateApp();
-			}
-			else
-			{
-				deactivateApp();
-			}
-			LRESULT result = g_origDdWndProc(hwnd, uMsg, wParam, lParam);
-			isDisplayChangeNotificationEnabled = true;
-			return result;
-		}
+				if (LOWORD(wParam) == WM_DESTROY)
+					redrawCount = 2;
 
-		case WM_DISPLAYCHANGE:
-		{
-			// Fix for alt-tabbing in Commandos 2
-			if (!isDisplayChangeNotificationEnabled)
-			{
-				return 0;
+				break;
 			}
-			break;
-		}
+			case WM_PAINT:
+			{
+				if (redrawCount > 0)
+				{
+					redrawCount--;
+					RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE | RDW_ALLCHILDREN);
+				}
+				break;
+			}
+
+			case WM_SIZE:
+			case WM_MOVE:
+			{
+				RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE | RDW_ALLCHILDREN);
+				break;
+			}
+
+			case WM_ACTIVATE:
+			{	
+				RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE | RDW_ALLCHILDREN);
+
+				if (g_windowed)
+				{
+					wParam = WA_ACTIVE;
+				}
+				else
+				{
+					if (wParam == WA_INACTIVE)
+						ShowWindow(hwnd, SW_MINIMIZE);
+				}
+				break;
+			}
+
+			case WM_ACTIVATEAPP:
+			{
+				if (g_windowed)
+				{
+					wParam = TRUE;
+					lParam = 0;
+				}
+				else
+				{
+					isDisplayChangeNotificationEnabled = false;
+					if (TRUE == wParam)
+					{
+						activateApp();
+					}
+					else
+					{
+						deactivateApp();
+					}
+					LRESULT result = g_origDdWndProc(hwnd, uMsg, wParam, lParam);
+					isDisplayChangeNotificationEnabled = true;
+					return result;
+				}
+			}
+
+			case WM_DISPLAYCHANGE:
+			{
+				// Fix for alt-tabbing in Commandos 2
+				if (!g_windowed && !isDisplayChangeNotificationEnabled)
+				{
+					return 0;
+				}
+				break;
+			}
+
+			/* Prevent freezing on Alt or F10 in windowed mode */
+			case WM_SYSKEYDOWN:
+			{
+				if (wParam != VK_F4)
+					return 0;
+			}
+
+
 		}
 
 		return g_origDdWndProc(hwnd, uMsg, wParam, lParam);
@@ -74,7 +126,8 @@ namespace DDraw
 		void setCooperativeLevel(HWND hwnd, DWORD flags)
 		{
 			static bool isDdWndProcHooked = false;
-			if ((flags & DDSCL_FULLSCREEN) && !isDdWndProcHooked)
+			g_windowed = !(flags & DDSCL_FULLSCREEN);
+			if (!isDdWndProcHooked)
 			{
 				g_origDdWndProc = reinterpret_cast<WNDPROC>(GetWindowLongPtr(hwnd, GWLP_WNDPROC));
 				Compat::hookFunction(reinterpret_cast<void*&>(g_origDdWndProc), ddWndProc);
