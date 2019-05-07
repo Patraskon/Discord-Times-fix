@@ -105,14 +105,6 @@ namespace
 				break;
 			}
 
-			/* Prevent freezing on Alt or F10 in windowed mode */
-			case WM_SYSKEYDOWN:
-			{
-				if (wParam != VK_F4)
-					return 0;
-			}
-
-
 		}
 
 		return g_origDdWndProc(hwnd, uMsg, wParam, lParam);
